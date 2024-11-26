@@ -47,7 +47,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # إنشاء الأزرار الخاصة بالتواصل مع المطور وقناته
     buttons = [
         [
-            InlineKeyboardButton("تواصل مع المطور💬", url="@l7l7aj"),
+            InlineKeyboardButton("تواصل مع المطور💬", url="https://t.me/l7l7aj"),
             InlineKeyboardButton("قناة 📱المطور", url="https://youtube.com/@l7aj.1m?si=G2aaF9U_7PkrdCCA")
         ]
     ]
