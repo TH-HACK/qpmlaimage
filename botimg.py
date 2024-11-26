@@ -1,12 +1,13 @@
 import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 
 # إعدادات البوت
-TELEGRAM_BOT_TOKEN = "7647977575:AAEs0yuy01ogPDheXPwJlD8YD-YHtIyGrQw"
-UNSPLASH_API_KEY = "g8BHvdo-mU87N6CAurG8EFTxbIS3EneRjvanzcBOs6E"
-UNSPLASH_URL = "https://api.unsplash.com/search/photos"
+TELEGRAM_BOT_TOKEN = "7647977575:AAEs0yuy01ogPDheXPwJlD8YD-YHtIyGrQw"  # ضع هنا توكن البوت
+PIXABAY_API_KEY = "47213182-534fa9316c4c7adb8cd808bf5"
+PIXABAY_IMAGE_URL = "https://pixabay.com/api/"
+PIXABAY_VIDEO_URL = "https://pixabay.com/api/videos/"
 ADMIN_USER_ID = 5164991393  # استبدل هذا بـ ID المشرف الخاص بك
 
 # تفعيل الـ logging
@@ -35,17 +36,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_message = """
     أهلاً بك في بوت! 🖐
-    يمكنك البحث🔍 عن صور🖼 فقط قم بكتابة اي كلمة💬 مثل *شمس☀️ ،  قمر🌑 ، طبيعة🏞 * من الاحسن باللغة الانجليزيا 🔤
+    يمكنك البحث🔍 عن صور أو فيديوهات. اختر النوع الذي ترغب في البحث عنه من الأزرار أدناه.
     
-    ●●●●●●●●●●●●●●●●●
+    ●●●●●●●●●●●●●●●●●●●
     /help - لعرض التعليمات.
     /about - لمزيد من المعلومات عن البوت.
     /register - لتسجيل نفسك في البوت.
     ●●●●●●●●●●●●●●●●●●●
     """
 
-    # إنشاء الأزرار الخاصة بالتواصل مع المطور وقناته
+    # إنشاء الأزرار الخاصة باختيار نوع البحث (صور وفيديوهات)
     buttons = [
+        [
+            InlineKeyboardButton("صور", callback_data='images'),
+            InlineKeyboardButton("فيديوهات", callback_data='videos')
+        ],
         [
             InlineKeyboardButton("تواصل مع المطور💬", url="https://t.me/l7l7aj"),
             InlineKeyboardButton("قناة 📱المطور", url="https://youtube.com/@l7aj.1m?si=G2aaF9U_7PkrdCCA")
@@ -70,40 +75,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(help_text)
 
-# دالة البحث عن الصور عبر Unsplash (كما كانت سابقًا)
-async def search_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.message.text
-    if query:
-        # إجراء طلب إلى API Unsplash للحصول على الصور
-        response = requests.get(
-            UNSPLASH_URL,
-            params={
-                "query": query,
-                "client_id": UNSPLASH_API_KEY,
-                "per_page": 5  # الحد من النتائج إلى 5 صور فقط
-            }
-        )
-
-        # التحقق من استجابة API
-        if response.status_code == 200:
-            data = response.json()
-            if data["results"]:
-                for photo in data["results"]:
-                    # إرسال الصور للمستخدم
-                    await update.message.reply_photo(photo["urls"]["regular"])
-            else:
-                await update.message.reply_text("لم يتم العثور على صور.")
-        else:
-            await update.message.reply_text("حدث خطأ أثناء البحث عن الصور.")
-            logger.error(f"Error fetching images from Unsplash: {response.status_code}")
-    else:
-        await update.message.reply_text("من فضلك أدخل نصًا للبحث عن الصور.")
-
 # دالة حول البوت
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     about_text = """
-    هذا البوت خاص بي البحث عن صور 
-    يمكنك استخدامه للبحث عن صور باستخدام الكلمات المفتاحية.
+    هذا البوت خاص بالبحث عن صور وفيديوهات باستخدام الكلمات المفتاحية.
     تم تطويره بواسطة المطور @l7l7aj.
     """
     await update.message.reply_text(about_text)
@@ -120,6 +95,90 @@ async def show_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("أنت لست المشرف!")
 
+# دالة البحث عن الصور عبر Pixabay
+async def search_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.message.text
+    if query:
+        response = requests.get(
+            PIXABAY_IMAGE_URL,
+            params={
+                "key": PIXABAY_API_KEY,
+                "q": query,
+                "per_page": 5
+            }
+        )
+
+        # التحقق من استجابة API
+        if response.status_code == 200:
+            data = response.json()
+            if data["hits"]:
+                for image in data["hits"]:
+                    # إرسال الصورة مع النص الذي يحتوي على المصدر
+                    photo_caption = f"المصدر: [Pixabay](https://pixabay.com/)"
+                    await update.message.reply_photo(image["webformatURL"], caption=photo_caption, parse_mode="Markdown")
+            else:
+                await update.message.reply_text("لم يتم العثور على صور.")
+        else:
+            await update.message.reply_text("حدث خطأ أثناء البحث عن الصور.")
+            logger.error(f"Error fetching images from Pixabay: {response.status_code}")
+    else:
+        await update.message.reply_text("من فضلك أدخل نصًا للبحث عن الصور.")
+
+# دالة البحث عن الفيديوهات عبر Pixabay
+async def search_videos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.message.text
+    if query:
+        response = requests.get(
+            PIXABAY_VIDEO_URL,
+            params={
+                "key": PIXABAY_API_KEY,
+                "q": query,
+                "per_page": 5
+            }
+        )
+
+        # التحقق من استجابة API
+        if response.status_code == 200:
+            data = response.json()
+            if data["hits"]:
+                for video in data["hits"]:
+                    # إرسال الفيديو مع النص الذي يحتوي على المصدر
+                    video_caption = f"المصدر: [Pixabay](https://pixabay.com/)"
+                    await update.message.reply_video(video["videos"]["medium"]["url"], caption=video_caption, parse_mode="Markdown")
+            else:
+                await update.message.reply_text("لم يتم العثور على فيديوهات.")
+        else:
+            await update.message.reply_text("حدث خطأ أثناء البحث عن الفيديوهات.")
+            logger.error(f"Error fetching videos from Pixabay: {response.status_code}")
+    else:
+        await update.message.reply_text("من فضلك أدخل نصًا للبحث عن الفيديوهات.")
+
+# التعامل مع الضغط على الأزرار لاختيار الصور أو الفيديوهات
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data = query.data
+
+    # حفظ نوع البحث في بيانات المستخدم
+    context.user_data["search_type"] = data
+
+    # تحديث الرسالة لتأكيد الاختيار
+    if data == "images":
+        await query.edit_message_text("تم اختيار البحث عن صور. الآن، اكتب كلمة البحث.")
+    elif data == "videos":
+        await query.edit_message_text("تم اختيار البحث عن فيديوهات. الآن، اكتب كلمة البحث.")
+
+# التعامل مع الرسائل بناءً على نوع البحث (صور أو فيديوهات)
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_data = context.user_data
+    search_type = user_data.get("search_type")
+
+    if search_type == "images":
+        await search_images(update, context)
+    elif search_type == "videos":
+        await search_videos(update, context)
+    else:
+        await update.message.reply_text("من فضلك اختر نوع البحث أولاً (صور أو فيديوهات) باستخدام الأزرار.")
+
 # تهيئة البوت
 def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -129,7 +188,8 @@ def main():
     app.add_handler(CommandHandler("about", about_command))
     app.add_handler(CommandHandler("register", register_user))
     app.add_handler(CommandHandler("admin", show_users))  # عرض عدد المستخدمين للمشرف
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_photos))  # استخدام الفلتر للبحث عن الصور
+    app.add_handler(CallbackQueryHandler(button))  # التعامل مع الضغط على الأزرار
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))  # التعامل مع الرسائل
 
     print("البوت يعمل الآن...")
     app.run_polling()
