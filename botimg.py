@@ -2,13 +2,14 @@ import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+import asyncio
 
 # إعدادات البوت
-TELEGRAM_BOT_TOKEN = "7647977575:AAEs0yuy01ogPDheXPwJlD8YD-YHtIyGrQw"  # ضع هنا توكن البوت
+TELEGRAM_BOT_TOKEN = "7647977575:AAEs0yuy01ogPDheXPwJlD8YD-YHtIyGrQw"  # التوكن
 PIXABAY_API_KEY = "47213182-534fa9316c4c7adb8cd808bf5"
 PIXABAY_IMAGE_URL = "https://pixabay.com/api/"
 PIXABAY_VIDEO_URL = "https://pixabay.com/api/videos/"
-ADMIN_USER_ID = 5164991393  # استبدل هذا بـ ID المشرف الخاص بك
+ADMIN_USER_ID = 5164991393  # ID المشرف
 
 # تفعيل الـ logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -116,6 +117,8 @@ async def search_images(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # إرسال الصورة مع النص الذي يحتوي على المصدر
                     photo_caption = f"المصدر: [Pixabay](https://pixabay.com/)"
                     await update.message.reply_photo(image["webformatURL"], caption=photo_caption, parse_mode="Markdown")
+                # إعادة إرسال رسالة الترحيب بعد إرسال الصور
+                await start(update, context)
             else:
                 await update.message.reply_text("لم يتم العثور على صور.")
         else:
@@ -145,6 +148,10 @@ async def search_videos(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # إرسال الفيديو مع النص الذي يحتوي على المصدر
                     video_caption = f"المصدر: [Pixabay](https://pixabay.com/)"
                     await update.message.reply_video(video["videos"]["medium"]["url"], caption=video_caption, parse_mode="Markdown")
+                
+                # بعد إرسال الفيديوهات، نرسل رسالة الترحيب
+                await asyncio.sleep(1)  # تأخير بسيط للتأكد من أن الفيديو قد تم إرساله
+                await start(update, context)  # إرسال رسالة الترحيب بعد إرسال جميع الفيديوهات
             else:
                 await update.message.reply_text("لم يتم العثور على فيديوهات.")
         else:
@@ -190,7 +197,6 @@ def main():
     app.add_handler(CommandHandler("admin", show_users))  # عرض عدد المستخدمين للمشرف
     app.add_handler(CallbackQueryHandler(button))  # التعامل مع الضغط على الأزرار
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))  # التعامل مع الرسائل
-
     print("البوت يعمل الآن...")
     app.run_polling()
 
